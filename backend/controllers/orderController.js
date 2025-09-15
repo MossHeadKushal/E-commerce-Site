@@ -121,7 +121,7 @@ const placeOrderKhalti = async (req, res) => {
       },
       {
         headers: {
-          Authorization: "Key live_secret_key_68791341fdd94846a146f0457ff7b455", // SECRET KEY
+          Authorization: process.env.KHALTI_SECRET_KEY, // SECRET KEY
           "Content-Type": "application/json",
         },
       }
