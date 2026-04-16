@@ -9,8 +9,6 @@ import axios from "axios";
 const placeOrder = async (req, res) => {
   try {
     const { userId, items, amount, address } = req.body;
-
-    // 🔹 Step 1: Check stock availability for each item + size
     for (const item of items) {
       const product = await productModel.findById(item._id);
       if (!product) {
@@ -33,7 +31,6 @@ const placeOrder = async (req, res) => {
       }
     }
 
-    // 🔹 Step 2: Prepare order data
     const orderData = {
       userId,
       items,
@@ -41,11 +38,10 @@ const placeOrder = async (req, res) => {
       amount,
       paymentMethod: "COD",
       payment: false,
-      status: "Pending", // optional: keep consistency with Khalti
+      status: "Pending", 
       date: Date.now(),
     };
 
-    // 🔹 Step 3: Reduce stock safely (per size)
     for (const item of items) {
       await productModel.updateOne(
         { _id: item._id, "sizes.size": item.size },
@@ -53,11 +49,9 @@ const placeOrder = async (req, res) => {
       );
     }
 
-    // 🔹 Step 4: Save order
     const newOrder = new orderModel(orderData);
     await newOrder.save();
 
-    // 🔹 Step 5: Clear user cart
     await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
     res.json({ success: true, message: "Order placed successfully!" });
@@ -66,6 +60,7 @@ const placeOrder = async (req, res) => {
     res.json({ success: false, message: error.message });
   }
 };
+
 // Placing orders using Khalti method
 const placeOrderKhalti = async (req, res) => {
   try {
@@ -81,7 +76,6 @@ const placeOrderKhalti = async (req, res) => {
       customer_phone,
     } = req.body;
 
-    // 🔹 Step 1: Check stock availability per size
     for (const item of items) {
       const product = await productModel.findById(item._id);
       if (!product) {
@@ -104,7 +98,6 @@ const placeOrderKhalti = async (req, res) => {
       }
     }
 
-    // 🔹 Step 2: Initiate Khalti payment
     const response = await axios.post(
       "https://dev.khalti.com/api/v2/epayment/initiate/",
       {
@@ -130,7 +123,6 @@ const placeOrderKhalti = async (req, res) => {
     const body = response.data;
 
     if (body.payment_url) {
-      // 🔹 Step 3: Save order as "Pending"
       const newOrder = new orderModel({
         userId,
         items,
@@ -145,7 +137,6 @@ const placeOrderKhalti = async (req, res) => {
 
       await newOrder.save();
 
-      // 🔹 Step 4: Reduce stock safely (per size)
       for (const item of items) {
         await productModel.updateOne(
           { _id: item._id, "sizes.size": item.size },
@@ -153,7 +144,6 @@ const placeOrderKhalti = async (req, res) => {
         );
       }
 
-      // Clear user cart
       await userModel.findByIdAndUpdate(userId, { cartData: {} });
 
       return res.json({
