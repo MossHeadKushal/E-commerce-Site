@@ -22,8 +22,11 @@ connectCloudinary()
 
 //middlewears
 app.use(express.json())
-app.use(cors({ origin: 'https://backend-kuhsal-wears.onrender.com/' }));
-
+app.use(cors({
+  origin: 'https://kushalwears.kharel-kushal57.workers.dev', 
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true
+}));
 //api endpoints
 app.use('/api/user', userRouter)
 app.use('/api/product', productRouter)
