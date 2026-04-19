@@ -6,7 +6,7 @@ import axios from "axios";
 
 const Product = () => {
   const { productId } = useParams();
-  const { products, currency, addToCart } = useContext(shopContext);
+  const { products, currency, addToCart, backendUrl } = useContext(shopContext);
   const [productData, setProductData] = useState(null);
   const [image, setImage] = useState("");
   const [selectedSize, setSelectedSize] = useState(null);
@@ -22,7 +22,8 @@ const Product = () => {
 
   const fetchRelatedProducts = async () => {
     try {
-      const res = await axios.get(`/api/recommendation/${productId}`);
+      const apiUrl = backendUrl || "";
+      const res = await axios.get(`${apiUrl}/api/recommendation/${productId}`);
       setRelatedProducts(res.data);
     } catch (error) {
       console.error("Error fetching related products:", error);
@@ -31,8 +32,13 @@ const Product = () => {
 
   useEffect(() => {
     fetchProductData();
-    fetchRelatedProducts();
-  }, [productId]);
+  }, [productId, products]);
+
+  useEffect(() => {
+    if (productId) {
+      fetchRelatedProducts();
+    }
+  }, [productId, backendUrl]);
 
   if (!productData) return <div className="opacity-0"></div>;
 
