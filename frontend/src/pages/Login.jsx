@@ -6,7 +6,7 @@ import { toast } from 'react-toastify';
 const Login = () => {
 
   const [currentState,setCurrentState] = useState('Login');
-  const {token, setToken, navigate, backendUrl} = useContext(shopContext)
+  const {token, setToken, setUserName, navigate, backendUrl} = useContext(shopContext)
 
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
@@ -18,20 +18,30 @@ const Login = () => {
       try {
         if(currentState === 'Sign Up'){
           const response = await axios.post(backendUrl + '/api/user/register',{name,email,password})
-          console.log(response.data);
+          console.log('Register response:', response.data);
           if(response.data.success){
             setToken(response.data.token)
             localStorage.setItem('token',response.data.token)
+            if (response.data.name) {
+              console.log('Setting userName from response:', response.data.name);
+              setUserName(response.data.name)
+              localStorage.setItem('userName', response.data.name)
+            }
           }else{
           toast.error(response.data.message)
         }
         }
         else{
           const response = await axios.post(backendUrl + '/api/user/login', {email,password})
-          console.log(response.data)
+          console.log('Login response:', response.data)
           if(response.data.success){
              setToken(response.data.token)
             localStorage.setItem('token',response.data.token)
+            if (response.data.name) {
+              console.log('Setting userName from response:', response.data.name);
+              setUserName(response.data.name)
+              localStorage.setItem('userName', response.data.name)
+            }
           }
           else{
             toast.error(response.data.message)

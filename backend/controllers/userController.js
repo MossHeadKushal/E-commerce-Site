@@ -24,7 +24,7 @@ const loginUser = async (req, res) => {
         if (isMatch) {
 
             const token = createToken(user._id)
-            res.json({ success: true, token })
+            res.json({ success: true, token, name: user.name })
         }
         else {
             res.json({ success: false, message: 'Invalid Credentials' })
@@ -37,6 +37,21 @@ const loginUser = async (req, res) => {
 
     }
 
+}
+
+// Get profile information for authenticated user
+const getUserProfile = async (req, res) => {
+    try {
+        const { userId } = req.body
+        const user = await userModel.findById(userId).select('name email')
+        if (!user) {
+            return res.json({ success: false, message: 'User not found' })
+        }
+        res.json({ success: true, user })
+    } catch (error) {
+        console.log(error)
+        res.json({ success: false, message: error.message })
+    }
 }
 
 //Routes for User Registration
@@ -76,7 +91,7 @@ const registerUser = async (req, res) => {
 
         const token = createToken(user._id)
 
-        res.json({ success: true, token })
+        res.json({ success: true, token, name: user.name })
 
     } catch (error) {
         console.log(error)
@@ -100,4 +115,4 @@ const adminLogin = async (req, res) => {
 
 
 
-export { loginUser, registerUser, adminLogin }
+export { loginUser, registerUser, adminLogin, getUserProfile }

@@ -13,12 +13,18 @@ const Navbar = () => {
     token,
     setToken,
     setCartItems,
+    userName,
+    setUserName,
   } = useContext(shopContext);
+
+  console.log('Navbar - token:', token ? 'present' : 'missing', 'userName:', userName);
 
   const logout = () => {
     navigate("/login");
     localStorage.removeItem("token");
+    localStorage.removeItem("userName");
     setToken("");
+    setUserName("");
     setCartItems({});
   };
 
@@ -62,6 +68,9 @@ const Navbar = () => {
       </ul>
 
       <div className="flex items-center gap-6">
+        {token && userName && (
+          <span className="text-sm text-gray-700">Hi, {userName}</span>
+        )}
         <img
           onClick={() => setShowSearch(true)}
           src={assets.search}
@@ -79,12 +88,18 @@ const Navbar = () => {
           {token && (
             <div className="group-hover:block hidden absolute dropdown-menu right-0 pt-4">
               <div className="flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded">
-                <p className="cursor-pointer hover:text-black">My Profile</p>
+                <p onClick={() => navigate("/profile")} className="cursor-pointer hover:text-black">My Profile</p>
                 <p
                   onClick={() => navigate("/orders")}
                   className="cursor-pointer hover:text-black"
                 >
                   Orders
+                </p>
+                <p
+                  onClick={() => navigate("/track-order")}
+                  className="cursor-pointer hover:text-black"
+                >
+                  Track Order
                 </p>
                 <p onClick={logout} className="cursor-pointer hover:text-black">
                   Log Out

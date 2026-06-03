@@ -15,7 +15,8 @@ const ShopContextProvider = (props) => {
   const [showSearch, setShowSearch] = useState(false);
   const [products, setProducts] = useState([]);
   const [cartItems, setCartItems] = useState({});
-  const [token, setToken] = useState("");
+  const [token, setToken] = useState(() => localStorage.getItem("token") || "");
+  const [userName, setUserName] = useState(() => localStorage.getItem("userName") || "");
   const navigate = useNavigate();
   console.log("Backend URL:", import.meta.env.VITE_BACKEND_URL);
 
@@ -139,16 +140,44 @@ const ShopContextProvider = (props) => {
     }
   };
 
+  const getUserProfile = async (token) => {
+    try {
+      console.log('Fetching user profile with token:', token ? 'present' : 'missing');
+      const response = await axios.post(
+        backendUrl + "/api/user/profile",
+        {},
+        {
+          headers: {
+            token: token,
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      console.log('Profile response:', response.data);
+      if (response.data.success) {
+        setUserName(response.data.user.name);
+        localStorage.setItem("userName", response.data.user.name);
+        console.log('User name set to:', response.data.user.name);
+      } else {
+        console.log('Profile fetch unsuccessful:', response.data.message);
+      }
+    } catch (error) {
+      console.log('Profile fetch error:', error.response?.data || error.message);
+    }
+  };
+
   useEffect(() => {
     getProductsData();
   }, []);
 
   useEffect(() => {
-    if (!token && localStorage.getItem("token")) {
-      setToken(localStorage.getItem("token"));
-      getUserCart(localStorage.getItem("token"));
+    if (token) {
+      getUserCart(token);
+      if (!userName) {
+        getUserProfile(token);
+      }
     }
-  }, []);
+  }, [token]);
 
   const value = {
     products,
@@ -167,6 +196,8 @@ const ShopContextProvider = (props) => {
     backendUrl,
     token,
     setToken,
+    userName,
+    setUserName,
     setCartItems,
   };
 

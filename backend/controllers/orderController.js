@@ -38,8 +38,9 @@ const placeOrder = async (req, res) => {
       amount,
       paymentMethod: "COD",
       payment: false,
-      status: "Pending", 
+      status: "Pending",
       date: Date.now(),
+      discountApplied: req.body.discountApplied || null,
     };
 
     for (const item of items) {
@@ -133,6 +134,7 @@ const placeOrderKhalti = async (req, res) => {
         status: "Pending",
         date: Date.now(),
         purchase_order_id,
+        discountApplied: req.body.discountApplied || null,
       });
 
       await newOrder.save();
@@ -215,4 +217,116 @@ const updateStatus = async(req, res) =>{
 
 }
 
-export {placeOrder, placeOrderKhalti, allOrders, userOrders, updateStatus}
+// Get tracking information for an order
+const getTracking = async (req, res) => {
+    try {
+        const { orderId } = req.body
+
+        const order = await orderModel.findById(orderId)
+        if (!order) {
+            return res.json({ success: false, message: 'Order not found' })
+        }
+
+        // Mock real-time location updates (in production, this would come from GPS tracking)
+        const mockLocations = [
+            { lat: 27.7172, lng: 85.3240, address: 'Kathmandu, Nepal' },
+            { lat: 27.7200, lng: 85.3300, address: 'Near Thamel, Kathmandu' },
+            { lat: 27.7150, lng: 85.3200, address: 'Downtown Kathmandu' }
+        ]
+
+        const randomLocation = mockLocations[Math.floor(Math.random() * mockLocations.length)]
+
+        // Update tracking info
+        order.tracking = order.tracking || {}
+        order.tracking.currentLocation = randomLocation
+        order.tracking.estimatedDelivery = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000) // 2 days from now
+
+        // Add to tracking history
+        order.tracking.trackingHistory = order.tracking.trackingHistory || []
+        order.tracking.trackingHistory.push({
+            status: order.status,
+            location: randomLocation,
+            timestamp: new Date()
+        })
+
+        await order.save()
+
+        res.json({
+            success: true,
+            tracking: {
+                currentLocation: order.tracking.currentLocation,
+                estimatedDelivery: order.tracking.estimatedDelivery,
+                status: order.status,
+                trackingHistory: order.tracking.trackingHistory
+            }
+        })
+    } catch (error) {
+        console.log(error)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+// Update tracking location (for admin/delivery personnel)
+const updateTracking = async (req, res) => {
+    try {
+        const { orderId, lat, lng, address } = req.body
+
+        const order = await orderModel.findById(orderId)
+        if (!order) {
+            return res.json({ success: false, message: 'Order not found' })
+        }
+
+        order.tracking = order.tracking || {}
+        order.tracking.currentLocation = { lat, lng, address }
+        order.tracking.trackingHistory = order.tracking.trackingHistory || []
+        order.tracking.trackingHistory.push({
+            status: order.status,
+            location: { lat, lng, address },
+            timestamp: new Date()
+        })
+
+        await order.save()
+        res.json({ success: true, message: 'Tracking updated successfully' })
+    } catch (error) {
+        console.log(error)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+// Cancel order
+const cancelOrder = async (req, res) => {
+    try {
+        const { orderId } = req.body
+        const userId = req.body.userId
+
+        const order = await orderModel.findById(orderId)
+        if (!order) {
+            return res.json({ success: false, message: 'Order not found' })
+        }
+
+        // Check if the order belongs to the user
+        if (order.userId !== userId) {
+            return res.json({ success: false, message: 'Unauthorized to cancel this order' })
+        }
+
+        // Check if order can be cancelled (not shipped or delivered)
+        if (order.status === 'Shipped' || order.status === 'Delivered' || order.status === 'Cancelled') {
+            return res.json({ success: false, message: 'Order cannot be cancelled at this stage' })
+        }
+
+        // Update order status to cancelled
+        order.status = 'Cancelled'
+        await order.save()
+
+        // If payment was made, you might want to process refund here
+        // For COD orders, no refund needed
+        // For Khalti payments, you would need to process refund through Khalti API
+
+        res.json({ success: true, message: 'Order cancelled successfully' })
+    } catch (error) {
+        console.log(error)
+        res.json({ success: false, message: error.message })
+    }
+}
+
+export {placeOrder, placeOrderKhalti, allOrders, userOrders, updateStatus, getTracking, updateTracking, cancelOrder}

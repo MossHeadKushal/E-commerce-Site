@@ -8,6 +8,9 @@ import { toast } from "react-toastify";
 
 const PlaceOrder = () => {
   const [method, setMethod] = useState("cod");
+  const [discountCode, setDiscountCode] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [appliedDiscount, setAppliedDiscount] = useState(null);
   const {
     navigate,
     backendUrl,
@@ -17,6 +20,7 @@ const PlaceOrder = () => {
     getCartAmount,
     delivery_fee,
     products,
+    currency,
   } = useContext(shopContext);
 
   // Initialize from localStorage
@@ -49,6 +53,41 @@ const PlaceOrder = () => {
     setFormData((data) => ({ ...data, [name]: value }));
   };
 
+  const applyDiscount = async () => {
+    if (!discountCode.trim()) {
+      toast.error("Please enter a discount code");
+      return;
+    }
+
+    try {
+      const response = await axios.post(backendUrl + "/api/discount/validate", {
+        code: discountCode.trim().toUpperCase(),
+        orderAmount: getCartAmount() + delivery_fee
+      });
+
+      if (response.data.success) {
+        setDiscountAmount(response.data.discount.discountAmount);
+        setAppliedDiscount(response.data.discount);
+        toast.success(`Discount applied! You saved ${currency}${response.data.discount.discountAmount}`);
+      } else {
+        toast.error(response.data.message);
+        setDiscountAmount(0);
+        setAppliedDiscount(null);
+      }
+    } catch (error) {
+      toast.error("Invalid discount code");
+      setDiscountAmount(0);
+      setAppliedDiscount(null);
+    }
+  };
+
+  const removeDiscount = () => {
+    setDiscountCode("");
+    setDiscountAmount(0);
+    setAppliedDiscount(null);
+    toast.info("Discount removed");
+  };
+
   const onSubmitHandler = async (event) => {
     event.preventDefault();
     try {
@@ -74,13 +113,16 @@ const PlaceOrder = () => {
       let orderData = {
         address: formData,
         items: orderItems,
-        amount: getCartAmount() + delivery_fee,
-        userId: token.userId, // assuming your token contains userId
+        amount: getCartAmount() + delivery_fee - discountAmount,
         customer_name: `${formData.firstName} ${formData.lastName}`,
         customer_email: formData.email,
         customer_phone: formData.phone,
         purchase_order_id: `Order${Date.now()}`,
         purchase_order_name: "My Order",
+        discountApplied: appliedDiscount ? {
+          code: appliedDiscount.code,
+          amount: discountAmount
+        } : null
       };
 
       switch (method) {
@@ -226,10 +268,52 @@ const PlaceOrder = () => {
         />
       </div>
 
+      {/**Discount Code Section */}
+      <div className="mt-8">
+        <Title text1={"DISCOUNT"} text2={"CODE"} />
+        <div className="mt-2 flex gap-2">
+          <input
+            value={discountCode}
+            onChange={(e) => setDiscountCode(e.target.value)}
+            type="text"
+            placeholder="Enter discount code"
+            className="border border-gray-300 rounded py-1.5 px-3.5 w-full uppercase"
+            disabled={appliedDiscount !== null}
+          />
+          {!appliedDiscount ? (
+            <button
+              type="button"
+              onClick={applyDiscount}
+              className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+            >
+              Apply
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={removeDiscount}
+              className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+        <div className="mt-2 text-sm text-gray-600">
+          <p>Don't have a discount code? <span onClick={() => navigate('/track-order')} className="text-blue-600 cursor-pointer hover:underline">Check available discounts</span></p>
+        </div>
+        {appliedDiscount && (
+          <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
+            <p className="text-green-700 text-sm">
+              ✅ {appliedDiscount.description} - You saved {currency}{discountAmount}!
+            </p>
+          </div>
+        )}
+      </div>
+
       {/**Right side */}
       <div className="mt-8">
         <div className="mt-8 min-w-80">
-          <CartTotal />
+          <CartTotal discountAmount={discountAmount} />
         </div>
         <div className="mt-12">
           <Title text1={"PAYMENT"} text2={"METHOD"} />
