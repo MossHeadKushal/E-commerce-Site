@@ -86,7 +86,7 @@ seedDiscounts()
 //middlewears
 app.use(express.json())
 app.use(cors({
-  origin: ['https://kushalwears.kharel-kushal57.workers.dev', 'http://localhost:5173'], 
+  origin: ['https://kushalwears.kharel-kushal57.workers.dev', 'http://localhost:5000'], 
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
